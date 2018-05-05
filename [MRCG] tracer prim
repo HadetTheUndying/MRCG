@@ -1,0 +1,13 @@
+// DROP ME IN A "BULLET" OBJECT TO BE USED AS A VISUAL TRACER FOR AIRBORN BULLETS. THIS SCRIPT WILL DELETE ITSELF ONCE INITIAL SETUP IS COMPLETE.
+
+default
+{
+    state_entry()
+    {
+        llVolumeDetect(TRUE);
+        llSetStatus(STATUS_PHYSICS, TRUE);
+        llSetLinkPrimitiveParamsFast(LINK_THIS, [PRIM_TEMP_ON_REZ, TRUE]);
+        llSleep(0.22);
+        llRemoveInventory("[MRCG] tracer prim");
+    }
+}
