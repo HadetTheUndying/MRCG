@@ -1,0 +1,351 @@
+//Modular Raycast Gun (MRCG) core script by Nero Revestel
+
+
+//NOTE: In these annotations, the word "bullet" is reference to the rays being casted by llCastRay
+
+
+
+
+
+//SETTINGS__________________________________________
+
+integer damage = 70; //amount of damage each bullet deals
+
+integer falloff_damage = 40; //damage value for all hits beyond [falloff_range] (set as 0 to enable dynamic damage falloff, interpolating bullet damage from [damage] to 0 between ranges [falloff_range] and [max_range])
+
+float falloff_range = 40.0; //range in meters at which bullets begin to deal diminished damage
+
+float max_range = 200.0; //range in meters at which bullets begin to deal no damage (zero damage is dealt because the max raycast length is defined by this variable)
+
+float firing_rate = 0.05; //delay in seconds between each shot (set to 0 for fastest possible firing rate)
+
+float bullet_spread = 2.0; //angle in degrees within which bullets will spread
+
+integer magazine_size = 52; //number of bullets that can be fired per reload
+
+float reload_speed = 3.0; //time it takes in seconds to reload the gun
+
+
+
+/*EFFECTS__________________________________________
+
+(If a setting is not applicable, leave it empty to disable it)*/
+
+//GENERAL
+
+integer tracer_rate = 3; //for every [tracer_rate] bullets fired, one [tracer_object] will be fired. Set to 0 to disable tracers, set to 1 to match [firing_rate] so that a tracer will be rezzed for every actual bullet (cannot exceed [firing_rate])
+
+float volume = 0.5; //volume of all sounds played
+
+//SOUNDS
+
+string firing_sound = "a0395dcb-9aca-4171-04b9-46848ee7abfd"; //looping gunshot sound to be played while trigger is held
+
+string firing_start_sound = ""; //sound played once when trigger is pulled
+
+string firing_end_sound = "1baf01c6-0c9f-1e3c-e961-946dbd32e5cd"; //sound played once when trigger is released
+
+string reload_sound = "fbfd446c-4dbc-4b69-23cc-9665d078d030"; //sound played when reloading the gun
+
+string hit_sound = "2c1b90f4-c7b2-713e-71f1-d8d25e829f7a"; //sound played when a bullet hits an avatar for full damage
+
+string hit_sound_falloff = "2c1b90f4-c7b2-713e-71f1-d8d25e829f7a"; //sound played when a bullet hits an avatar beyond [falloff_range]
+
+string holster_sound = ""; //sound played when holstering the gun
+
+string unholster_sound = ""; //sound played when unholstering the gun
+
+//ANIMATIONS
+
+string firing_animation = "fire"; //looping animation to be played while trigger is held
+
+string aiming_animation = "aim"; //looping animation to be played while avatar is in mouselook
+
+string holding_animation = ""; //looping animation to be played while avatar is out of mouselook
+
+string reload_animation = "reload"; //animation played when reloading the gun
+
+string holster_animation = ""; //animation played when holstering the gun
+
+string unholster_animation = ""; //animation played when unholstering the gun
+
+
+
+//CHAT COMMANDS__________________________________________
+
+integer listen_channel = 1; //channel for listening to all chat commands and gesture triggers (for reloading and holstering, etc.)
+
+string holster_command = "toggle_holster"; //chat command for toggling the gun holster
+
+string reload_command = "reload"; //chat command for reloading the gun
+
+
+
+
+
+/*___________________________________________
+NOTE: DON'T TOUCH ANYTHING BELOW HERE UNLESS YOU KNOW WHAT YOU ARE DOING!
+___________________________________________*/
+
+
+
+
+
+//GLOBAL VARIABLES__________________________________________
+
+integer tracercounter = 0;
+integer magazine;
+integer shooting = 0;
+
+
+
+//FUNCTIONS__________________________________________
+
+sleep(float time) //function to replace llSleep for more consistency and accuracy to real-life time. DO NOT TOUCH THIS.
+{
+    llResetTime();
+    do{llSleep(0.022);}while(llGetTime()<time);
+}
+
+Unholster() //function for unholstering the gun
+{
+    if(unholster_animation != "")
+    {
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llStartAnimation(unholster_animation);
+    }
+    if(unholster_sound != "")llPlaySound(unholster_sound, volume);
+    llSetLinkAlpha(LINK_SET, 1.0, ALL_SIDES);
+    llRequestPermissions(llGetOwner(), PERMISSION_TAKE_CONTROLS);
+    llTakeControls(CONTROL_ML_LBUTTON, TRUE, FALSE);
+}
+
+Holster() //function for holstering the gun
+{
+    if(holster_animation != "")
+    {
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llStartAnimation(holster_animation);
+    }
+    if(holster_sound != "")llPlaySound(holster_sound, volume);
+    llSetLinkAlpha(LINK_SET, 0.0, ALL_SIDES);
+    llReleaseControls();
+}
+
+Reload() //function for reloading the gun
+{
+    if(reload_animation != "")
+    {
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llStartAnimation(reload_animation);
+    }
+    if(reload_sound != "")llPlaySound(reload_sound, volume);
+    sleep(reload_speed);
+    magazine = magazine_size;
+}
+
+ShootBullet() //function that simulates a "shot" using raycast
+{
+    llRequestPermissions(llGetOwner(), PERMISSION_TRACK_CAMERA);
+    float spread = bullet_spread * DEG_TO_RAD;
+    rotation rot = llEuler2Rot(<0,llFrand(spread)-(spread/2.0),0>) * llEuler2Rot(<llFrand(TWO_PI),0,0>) * llGetCameraRot();
+    vector pos = llGetCameraPos()+llRot2Fwd(llGetCameraRot());
+    vector endpos = pos+<max_range,0,0>*rot;
+    list raycast = llCastRay(pos, endpos, [RC_MAX_HITS, 2]);
+    key target = (key)llList2String(raycast, 0);
+    vector targpos = (vector)llList2String(raycast, 1);
+    if(target == llGetOwner())
+    {
+        target = (key)llList2String(raycast, 2);
+        targpos = (vector)llList2String(raycast, 3);
+    }
+    
+    if(llGetAgentSize(target) != ZERO_VECTOR)
+    {
+        //damage target
+        integer dmg;
+        float dist = llVecDist(pos, targpos);
+        if(dist > falloff_range)
+        {
+            if(falloff_damage)
+            {
+                dmg = falloff_damage;
+            }
+            else
+            {
+                float max_excess = max_range - falloff_range;
+                float excess = dist - falloff_range;
+                dmg = llRound(damage*(1.0-excess/max_excess));
+            }
+        }
+        else
+        {
+            dmg = damage;
+        }
+        
+        if(dmg == damage)
+        {
+            if(hit_sound != "")llTriggerSound(hit_sound, volume);
+        }
+        else
+        {
+            if(hit_sound_falloff != "")llTriggerSound(hit_sound_falloff, volume);
+        }
+        
+        llSetObjectDesc((string)dmg);
+        llRezObject("[MRCG] damage", llGetPos()+<0.,0.,5.>, ZERO_VECTOR, llGetRot(), (integer)llListFindList(llGetAgentList(AGENT_LIST_REGION, []), [target]));
+        string name = llGetObjectName();
+        llSetObjectName(">");
+        llOwnerSay("/me "+llKey2Name(target)+"  |  "+(string)dmg+"dmg");
+        llSetObjectName(name);
+    }
+    
+    if(!tracer_rate)return;
+    tracercounter -= 1;
+    if(tracercounter <= 0)
+    {
+        llMessageLinked(LINK_SET, -2, (string)rot, "");
+        tracercounter = tracer_rate;
+    }
+}
+
+FiringStart() //function to be called once when trigger is pulled
+{
+    tracercounter = tracer_rate;
+    if(firing_start_sound != "")llTriggerSound(firing_start_sound, volume);
+    if(firing_sound != "")llLoopSound(firing_sound, volume);
+    if(firing_animation != "")
+    {
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llStartAnimation(firing_animation);
+    }
+    shooting = 1;
+}
+
+FiringStop() //function to be called once when trigger is released
+{
+    if(firing_end_sound != "")llTriggerSound(firing_end_sound, volume);
+    llStopSound();
+    if(firing_animation != "")
+    {
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llStopAnimation(firing_animation);
+    }
+    shooting = 0;
+    llResetOtherScript("[MRCG] automatic (tracer node)");
+}
+
+
+
+
+
+default
+{
+    attach(key id)
+    {
+        llSleep(1.0);
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        llRequestPermissions(llGetOwner(), PERMISSION_TAKE_CONTROLS);
+        llTakeControls(CONTROL_ML_LBUTTON, TRUE, FALSE);
+        tracercounter = tracer_rate;
+        magazine = magazine_size;
+        llSetTimerEvent(0.55);
+        llListen(listen_channel, "", llGetOwner(), "");
+    }
+    
+    listen(integer c, string n, key id, string m)
+    {
+        if(m == holster_command)
+        {
+            Holster();
+            llSleep(0.022);
+            state holstered;
+        }
+        
+        if(m == reload_command && magazine != magazine_size)
+        {
+            Reload();
+        }
+    }
+
+    control(key id, integer level, integer edge)
+    {
+        if(level & edge & CONTROL_ML_LBUTTON)
+        {
+            //firing has started
+            FiringStart();
+        }
+        else if(edge & CONTROL_ML_LBUTTON && shooting)
+        {
+            //firing has stopped
+            FiringStop();
+        }
+        
+        if(level & CONTROL_ML_LBUTTON && shooting)
+        {
+            //continuously triggered while firing
+            if(llGetTime() >= firing_rate)
+            {
+                //shot is fired
+                ShootBullet();
+                magazine -= 1;
+                llResetTime();
+                if(magazine <= 0)
+                {
+                    FiringStop();
+                    Reload();
+                }
+            }
+        }
+    }
+    
+    timer()
+    {
+        if(llGetAgentInfo(llGetOwner())&AGENT_MOUSELOOK)
+        {
+            //continuously triggered while in mouselook
+            if(aiming_animation != "")
+            {
+                llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+                llStartAnimation(aiming_animation);
+            }
+        }
+        else
+        {
+            //continously triggered while out of mouselook
+            if(aiming_animation != "")
+            {
+                llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+                llStopAnimation(aiming_animation);
+            }
+        }
+    }
+}
+
+
+
+state holstered
+{
+    state_entry()
+    {
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        if(firing_animation != "")llStopAnimation(firing_animation);
+        if(aiming_animation != "")llStopAnimation(aiming_animation);
+        if(holding_animation != "")llStopAnimation(holding_animation);
+        llListen(listen_channel, "", llGetOwner(), "");
+    }
+    
+    listen(integer c, string n, key id, string m)
+    {
+        if(m == holster_command)
+        {
+            Unholster();
+            llSleep(0.022);
+            state default;
+        }
+    }
+}
