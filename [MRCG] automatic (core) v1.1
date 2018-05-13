@@ -313,10 +313,20 @@ default
                 llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
                 llStartAnimation(aiming_animation);
             }
+            if(holding_animation != "")
+            {
+                llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+                llStopAnimation(holding_animation);
+            }
         }
         else
         {
             //continously triggered while out of mouselook
+            if(holding_animation != "")
+            {
+                llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+                llStartAnimation(holding_animation);
+            }
             if(aiming_animation != "")
             {
                 llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
