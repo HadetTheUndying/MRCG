@@ -9,9 +9,13 @@
 
 //SETTINGS__________________________________________
 
+string gun_type = "Assault Rifle"; //the type of gun this script is configured for, used only for reference
+
 integer damage = 70; //amount of damage each bullet deals
 
 integer falloff_damage = 40; //damage value for all hits beyond [falloff_range] (set as 0 to enable dynamic damage falloff, interpolating bullet damage from [damage] to 0 between ranges [falloff_range] and [max_range])
+
+integer LBA_damage = 1; //anti-armor damage dealt to LBA objects
 
 float falloff_range = 40.0; //range in meters at which bullets begin to deal diminished damage
 
@@ -193,6 +197,8 @@ ShootBullet() //function that simulates a "shot" using raycast
         }
         
         llSetObjectDesc((string)dmg);
+        llRegionSay(-777, (string)target + "," + (string)dmg + "," + gun_type + "," + (string)damage + "," + (string)falloff_damage + "," + (string)LBA_damage + "," + (string)falloff_range + "," + (string)max_range + "," + (string)firing_rate + "," + (string)bullet_spread + "," + (string)magazine_size + "," + (string)reload_speed);
+        LBA_AT(target, LBA_damage);
         llRezObject("[MRCG] damage", llGetPos()+<0.,0.,5.>, ZERO_VECTOR, llGetRot(), (integer)llListFindList(llGetAgentList(AGENT_LIST_REGION, []), [target]));
         string name = llGetObjectName();
         llSetObjectName(">");
@@ -233,6 +239,13 @@ FiringStop() //function to be called once when trigger is released
     }
     shooting = 0;
     llResetOtherScript("[MRCG] automatic (tracer node)");
+}
+
+LBA_AT(key id, integer dmg)
+{
+    integer hex = (integer)("0x" + llGetSubString(llMD5String((string)id,0), 0, 3));
+    llRegionSayTo(id,hex,(string)id+","+(string)dmg);
+    llRegionSayTo(id,-500,(string)id+",damage,"+(string)dmg);
 }
 
 
