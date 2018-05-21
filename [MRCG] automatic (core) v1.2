@@ -220,7 +220,7 @@ ShootBullet() //function that simulates a "shot" using raycast
 
 FiringStart() //function to be called once when trigger is pulled
 {
-    tracercounter = tracer_rate;
+    tracercounter = 0;
     if(firing_start_sound != "")llTriggerSound(firing_start_sound, volume);
     if(firing_sound != "")llLoopSound(firing_sound, volume);
     if(firing_animation != "")
