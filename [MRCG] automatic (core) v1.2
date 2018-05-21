@@ -37,7 +37,7 @@ float reload_speed = 3.0; //time it takes in seconds to reload the gun
 
 //GENERAL
 
-integer tracer_rate = 3; //for every [tracer_rate] bullets fired, one [tracer_object] will be fired. Set to 0 to disable tracers, set to 1 to match [firing_rate] so that a tracer will be rezzed for every actual bullet (cannot exceed [firing_rate])
+integer tracer_rate = 2; //for every [tracer_rate] bullets fired, one [tracer_object] will be fired. Set to 0 to disable tracers, set to 1 to match [firing_rate] so that a tracer will be rezzed for every actual bullet (cannot exceed [firing_rate])
 
 float volume = 0.5; //volume of all sounds played
 
@@ -271,6 +271,7 @@ default
         magazine = magazine_size;
         llSetTimerEvent(0.55);
         llListen(listen_channel, "", llGetOwner(), "");
+        llListen(-777, "", "", "");
     }
     
     listen(integer c, string n, key id, string m)
@@ -281,10 +282,22 @@ default
             llSleep(0.022);
             state holstered;
         }
-        
-        if(m == reload_command && magazine != magazine_size)
+        else if(m == reload_command && magazine != magazine_size)
         {
             Reload();
+        }
+        else
+        {
+            list enemy_stats = llParseString2List(m, [","], [""]);
+            if((key)llList2String(enemy_stats, 0) == llGetOwner())
+            {
+                string enemy = llKey2Name(llList2String(llGetObjectDetails(id, [OBJECT_OWNER]), 0));
+                string enemy_dmg = llList2String(enemy_stats, 1);
+                string name = llGetObjectName();
+                llSetObjectName(">");
+                llOwnerSay("/me " + enemy + " has hit you for " + enemy_dmg + "dmg");
+                llSetObjectName(name);
+            }
         }
     }
 
