@@ -155,7 +155,7 @@ ShootBullet() //function that simulates a "shot" using raycast
     rotation rot = llEuler2Rot(<0,llFrand(spread)-(spread/2.0),0>) * llEuler2Rot(<llFrand(TWO_PI),0,0>) * llGetCameraRot();
     vector pos = llGetCameraPos()+llRot2Fwd(llGetCameraRot());
     vector endpos = pos+<max_range,0,0>*rot;
-    list raycast = llCastRay(pos, endpos, [RC_MAX_HITS, 2]);
+    list raycast = llCastRay(pos, endpos, [RC_MAX_HITS, 2, RC_DATA_FLAGS, RC_GET_ROOT_KEY]);
     key target = (key)llList2String(raycast, 0);
     vector targpos = (vector)llList2String(raycast, 1);
     if(target == llGetOwner())
@@ -198,12 +198,15 @@ ShootBullet() //function that simulates a "shot" using raycast
         
         llSetObjectDesc((string)dmg);
         llRegionSay(-777, (string)target + "," + (string)dmg + "," + gun_type + "," + (string)damage + "," + (string)falloff_damage + "," + (string)LBA_damage + "," + (string)falloff_range + "," + (string)max_range + "," + (string)firing_rate + "," + (string)bullet_spread + "," + (string)magazine_size + "," + (string)reload_speed);
-        LBA_AT(target, LBA_damage);
         llRezObject("[MRCG] damage", llGetPos()+<0.,0.,5.>, ZERO_VECTOR, llGetRot(), (integer)llListFindList(llGetAgentList(AGENT_LIST_REGION, []), [target]));
         string name = llGetObjectName();
         llSetObjectName(">");
         llOwnerSay("/me "+llKey2Name(target)+"  |  "+(string)dmg+"dmg");
         llSetObjectName(name);
+    }
+    else
+    {
+        LBA_AT(target, LBA_damage);
     }
     
     if(!tracer_rate)return;
