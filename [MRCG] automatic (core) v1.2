@@ -294,8 +294,8 @@ default
                 string enemy = llKey2Name(llList2String(llGetObjectDetails(id, [OBJECT_OWNER]), 0));
                 string enemy_dmg = llList2String(enemy_stats, 1);
                 string name = llGetObjectName();
-                llSetObjectName(">");
-                llOwnerSay("/me " + enemy + " has hit you for " + enemy_dmg + "dmg");
+                llSetObjectName("<");
+                llOwnerSay("/me "+enemy+"  |  "+enemy_dmg+"dmg");
                 llSetObjectName(name);
             }
         }
