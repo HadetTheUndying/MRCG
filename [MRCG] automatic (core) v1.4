@@ -13,7 +13,7 @@ string gun_type = "Assault Rifle"; //the type of gun this script is configured f
 
 integer damage = 70; //amount of damage each bullet deals
 
-integer falloff_damage = 40; //damage value for all hits beyond [falloff_range] (set as 0 to enable dynamic damage falloff, interpolating bullet damage from [damage] to 0 between ranges [falloff_range] and [max_range])
+integer falloff_damage = 25; //damage value for all hits beyond [falloff_range] (set as 0 to enable dynamic damage falloff, interpolating bullet damage from [damage] to 0 between ranges [falloff_range] and [max_range])
 
 integer LBA_damage = 1; //anti-armor damage dealt to LBA objects
 
@@ -265,6 +265,7 @@ default
     
     state_entry()
     {
+        if(!llGetAttached())return;
         llRequestPermissions(llGetOwner(), PERMISSION_TAKE_CONTROLS);
         llTakeControls(CONTROL_ML_LBUTTON, TRUE, FALSE);
         tracercounter = tracer_rate;
@@ -334,6 +335,7 @@ default
     
     timer()
     {
+        if(!llGetAttached())return;
         if(llGetAgentInfo(llGetOwner())&AGENT_MOUSELOOK)
         {
             //continuously triggered while in mouselook
