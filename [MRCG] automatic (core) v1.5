@@ -13,11 +13,11 @@ string gun_type = "Assault Rifle"; //the type of gun this script is configured f
 
 integer damage = 70; //amount of damage each bullet deals
 
-integer falloff_damage = 25; //damage value for all hits beyond [falloff_range] (set as 0 to enable dynamic damage falloff, interpolating bullet damage from [damage] to 0 between ranges [falloff_range] and [max_range])
+integer falloff_damage = 25; //damage value for all hits beyond [falloff_range]
 
 integer LBA_damage = 1; //anti-armor damage dealt to LBA objects
 
-float falloff_range = 70.0; //range in meters at which bullets begin to deal diminished damage
+float falloff_range = 70.0; //range in meters at which bullets begin to deal diminished damage. Set to a negative value to invert the falloff, having the [falloff_damage] occur between you and the [falloff_range], rather than between the [falloff_range] and the [max_range]
 
 float max_range = 200.0; //range in meters at which bullets begin to deal no damage (zero damage is dealt because the max raycast length is defined by this variable)
 
@@ -169,18 +169,9 @@ ShootBullet() //function that simulates a "shot" using raycast
         //damage target
         integer dmg;
         float dist = llVecDist(pos, targpos);
-        if(dist > falloff_range)
+        if((falloff_range > 0 && dist > falloff_range) || (falloff_range < 0 && dist < llFabs(falloff_range)))
         {
-            if(falloff_damage)
-            {
-                dmg = falloff_damage;
-            }
-            else
-            {
-                float max_excess = max_range - falloff_range;
-                float excess = dist - falloff_range;
-                dmg = llRound(damage*(1.0-excess/max_excess));
-            }
+            dmg = falloff_damage;
         }
         else
         {
