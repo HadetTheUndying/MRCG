@@ -13,7 +13,7 @@ string gun_type = "Sniper Rifle"; //the type of gun this script is configured fo
 
 integer damage = 100; //amount of damage each bullet deals
 
-integer falloff_damage = 40; //damage value for all hits beyond [falloff_range]
+integer falloff_damage = 70; //damage value for all hits beyond [falloff_range]
 
 integer LBA_damage = 10; //anti-armor damage dealt to LBA objects
 
@@ -168,10 +168,10 @@ ShootBullet() //function that simulates a "shot" using detection area refinement
     integer i;
     llRequestPermissions(llGetOwner(), PERMISSION_TRACK_CAMERA);
     LBA_AT((key)llList2String(llCastRay(llGetCameraPos(), llGetCameraPos()+llRot2Fwd(llGetRot())*max_range, [RC_REJECT_TYPES, RC_REJECT_AGENTS, RC_DATA_FLAGS, RC_GET_ROOT_KEY]), 0), LBA_damage);
-    for(i = listlength; i; i--)
+    for(i = listlength+1; i; i--)
     {
         vector pos = llGetCameraPos();
-        key target = (key)llList2String(agentlist, i);
+        key target = (key)llList2String(agentlist, i-1);
         list details = llGetObjectDetails(target, [OBJECT_POS]);
         vector targetpos = (vector)llList2String(details, 0);
         vector targetsize = llGetAgentSize(target);
